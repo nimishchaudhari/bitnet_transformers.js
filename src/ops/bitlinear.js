@@ -163,28 +163,65 @@ class BitLinearOp {
     }
     
     /**
-     * Initialize WebGPU backend
+     * Initialize WebGPU backend with performance optimizations
      * @private
      */
     async _initializeWebGPU() {
         try {
-            const adapter = await navigator.gpu.requestAdapter();
-            if (!adapter) throw new Error('No WebGPU adapter available');
+            // Try high-performance adapter first (Chrome issue #369219127 mitigation)
+            let adapter = await navigator.gpu.requestAdapter({
+                powerPreference: 'high-performance',
+                forceFallbackAdapter: false
+            });
             
-            this.webgpuDevice = await adapter.requestDevice();
-            
-            // Check for required features (dp4a for efficient INT8 operations)
-            const hasDP4A = adapter.features.has('shader-f16') || 
-                           adapter.features.has('chromium-experimental-dp4a');
-            
-            if (!hasDP4A) {
-                console.warn('BitNet: WebGPU device lacks dp4a support, falling back to WASM');
-                this.backend = 'wasm-simd';
-                await this._initializeWASM();
-                return;
+            // Fallback to default adapter if high-performance unavailable
+            if (!adapter) {
+                console.warn('BitNet: High-performance GPU unavailable, using default adapter');
+                adapter = await navigator.gpu.requestAdapter();
             }
             
-            // Load BitLinear shader
+            if (!adapter) throw new Error('No WebGPU adapter available');
+            
+            // Log adapter information for debugging
+            console.log('BitNet WebGPU adapter:', {
+                vendor: adapter.info?.vendor || 'unknown',
+                architecture: adapter.info?.architecture || 'unknown', 
+                device: adapter.info?.device || 'unknown',
+                description: adapter.info?.description || 'unknown'
+            });
+            
+            // Request device with performance features
+            const deviceDescriptor = {
+                requiredFeatures: [],
+                requiredLimits: {
+                    // Request higher limits for better performance
+                    maxComputeWorkgroupSizeX: 256,
+                    maxComputeWorkgroupSizeY: 256,
+                    maxComputeInvocationsPerWorkgroup: 256
+                }
+            };
+            
+            // Add shader-f16 for better performance if supported
+            if (adapter.features.has('shader-f16')) {
+                deviceDescriptor.requiredFeatures.push('shader-f16');
+                console.log('BitNet: Using shader-f16 for improved performance');
+            }
+            
+            // Add dp4a for dot product acceleration if supported
+            if (adapter.features.has('chromium-experimental-dp4a')) {
+                deviceDescriptor.requiredFeatures.push('chromium-experimental-dp4a');
+                console.log('BitNet: Using dp4a for dot product acceleration');
+            }
+            
+            this.webgpuDevice = await adapter.requestDevice(deviceDescriptor);
+            this.adapter = adapter;
+            
+            // Performance hint for Windows users
+            if (navigator.platform.includes('Win')) {
+                console.log('💡 BitNet: On Windows, enable chrome://flags/#force-high-performance-gpu for best performance');
+            }
+            
+            // Load optimized BitLinear shader
             await this._loadWebGPUShader();
             
         } catch (error) {

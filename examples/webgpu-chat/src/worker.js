@@ -46,7 +46,7 @@ const stopping_criteria = new InterruptableStoppingCriteria();
  * Test WebGPU capability and BitNet readiness
  */
 async function testBitNetReadiness() {
-    console.log('=== Testing BitNet Readiness ===');
+    console.log('🚀 === Testing BitNet Readiness ===');
     
     try {
         // Check WebGPU availability
@@ -54,9 +54,28 @@ async function testBitNetReadiness() {
             console.log('[OK] WebGPU is available');
             
             try {
-                const adapter = await navigator.gpu.requestAdapter();
+                // Try high-performance adapter first
+                let adapter = await navigator.gpu.requestAdapter({
+                    powerPreference: 'high-performance',
+                    forceFallbackAdapter: false
+                });
+                
+                // Fallback to default if high-performance unavailable
+                if (!adapter) {
+                    console.log('[WARN] High-performance GPU unavailable, using default');
+                    adapter = await navigator.gpu.requestAdapter();
+                }
+                
                 if (adapter) {
                     console.log('[OK] WebGPU adapter acquired');
+                    
+                    // Log detailed adapter info for debugging
+                    console.log('[INFO] GPU Adapter Details:');
+                    console.log('  - Vendor:', adapter.info?.vendor || 'unknown');
+                    console.log('  - Architecture:', adapter.info?.architecture || 'unknown');
+                    console.log('  - Device:', adapter.info?.device || 'unknown');
+                    console.log('  - Description:', adapter.info?.description || 'unknown');
+                    
                     const device = await adapter.requestDevice();
                     console.log('[OK] WebGPU device acquired');
                     
@@ -67,6 +86,11 @@ async function testBitNetReadiness() {
                     console.log('[INFO] WebGPU Features:');
                     console.log('  - shader-f16:', hasF16);
                     console.log('  - dp4a:', hasDP4A);
+                    
+                    // Performance optimization hints
+                    if (navigator.platform.includes('Win')) {
+                        console.log('💡 [HINT] On Windows, enable chrome://flags/#force-high-performance-gpu for best BitNet performance');
+                    }
                     
                     // Test basic compute shader capability
                     const shaderCode = `
@@ -79,8 +103,22 @@ async function testBitNetReadiness() {
                     const shaderModule = device.createShaderModule({ code: shaderCode });
                     console.log('[OK] WebGPU compute shaders working');
                     
-                    console.log('[OK] BitNet WebGPU backend ready!');
-                    return 'webgpu';
+                    console.log('🎉 [OK] BitNet WebGPU backend ready!');
+                    return {
+                        backend: 'webgpu',
+                        webgpuInfo: {
+                            vendor: adapter.info?.vendor || 'unknown',
+                            architecture: adapter.info?.architecture || 'unknown',
+                            device: adapter.info?.device || 'unknown',
+                            description: adapter.info?.description || 'unknown',
+                            features: {
+                                'shader-f16': hasF16,
+                                'dp4a': hasDP4A
+                            }
+                        },
+                        performanceHints: navigator.platform.includes('Win') ? 
+                            ['Enable chrome://flags/#force-high-performance-gpu for best performance'] : []
+                    };
                 }
             } catch (e) {
                 console.log('[WARN] WebGPU failed, will use fallback:', e.message);
@@ -102,7 +140,7 @@ async function testBitNetReadiness() {
                 
                 if (WebAssembly.validate(simdTest)) {
                     console.log('[OK] WASM SIMD supported');
-                    return 'wasm-simd';
+                    return { backend: 'wasm-simd', webgpuInfo: null, performanceHints: [] };
                 }
             } catch (e) {
                 console.log('[WARN] WASM SIMD test failed:', e.message);
@@ -110,11 +148,11 @@ async function testBitNetReadiness() {
         }
         
         console.log('[OK] CPU fallback available');
-        return 'cpu';
+        return { backend: 'cpu', webgpuInfo: null, performanceHints: [] };
         
     } catch (error) {
         console.error('[ERROR] BitNet readiness test failed:', error);
-        return 'error';
+        return { backend: 'error', webgpuInfo: null, performanceHints: [] };
     }
 }
 
@@ -214,11 +252,19 @@ async function load() {
         data: 'Testing BitNet backend readiness...'
     });
     
-    const backend = await testBitNetReadiness();
+    const backendInfo = await testBitNetReadiness();
     self.postMessage({
         status: 'loading',
-        data: `[OK] BitNet will use ${backend} backend`
+        data: `[OK] BitNet will use ${backendInfo.backend} backend`
     });
+    
+    // Send WebGPU performance info to frontend
+    if (backendInfo.webgpuInfo) {
+        self.postMessage({
+            status: 'webgpu-info',
+            data: backendInfo
+        });
+    }
 
     // Load the pipeline and save it for future use.
     const [tokenizer, model] = await TextGenerationPipeline.getInstance(x => {

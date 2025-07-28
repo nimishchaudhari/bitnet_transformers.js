@@ -85,10 +85,19 @@ python export_microsoft_bitnet_production.py \
 ### WebGPU Implementation
 
 High-performance GPU compute using WGSL shaders:
-- Vectorized ternary weight unpacking
-- Optimized matrix multiplication kernels
-- Efficient memory access patterns
-- Workgroup-based parallel processing
+- **Adaptive GPU Selection**: Requests high-performance GPU first, falls back gracefully
+- **Performance Features**: Uses shader-f16 and dp4a when available for better performance
+- **Vectorized Operations**: Optimized ternary weight unpacking and matrix multiplication
+- **Workgroup Optimization**: Configurable workgroup sizes for different GPU architectures
+- **Chrome Performance Fix**: Mitigates Chrome issue #369219127 (powerPreference ignored on Windows)
+
+#### Performance Optimization Tips
+
+**Windows Users**: Enable `chrome://flags/#force-high-performance-gpu` for discrete GPU usage
+
+**macOS Users**: BitNet automatically selects discrete GPU when on AC power
+
+**All Platforms**: Check console for GPU adapter details and performance hints
 
 ### WASM SIMD Implementation
 
