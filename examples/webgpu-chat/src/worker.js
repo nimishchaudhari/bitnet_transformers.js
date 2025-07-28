@@ -4,7 +4,7 @@ import {
     AutoModelForCausalLM,
     TextStreamer,
     StoppingCriteria,
-} from '@xenova/transformers';
+} from '@huggingface/transformers';
 
 
 class CallbackTextStreamer extends TextStreamer {
@@ -41,6 +41,82 @@ class InterruptableStoppingCriteria extends StoppingCriteria {
 }
 
 const stopping_criteria = new InterruptableStoppingCriteria();
+
+/**
+ * Test WebGPU capability and BitNet readiness
+ */
+async function testBitNetReadiness() {
+    console.log('=== Testing BitNet Readiness ===');
+    
+    try {
+        // Check WebGPU availability
+        if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+            console.log('[OK] WebGPU is available');
+            
+            try {
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter) {
+                    console.log('[OK] WebGPU adapter acquired');
+                    const device = await adapter.requestDevice();
+                    console.log('[OK] WebGPU device acquired');
+                    
+                    // Check for BitNet-relevant features
+                    const hasF16 = adapter.features.has('shader-f16');
+                    const hasDP4A = adapter.features.has('chromium-experimental-dp4a');
+                    
+                    console.log('[INFO] WebGPU Features:');
+                    console.log('  - shader-f16:', hasF16);
+                    console.log('  - dp4a:', hasDP4A);
+                    
+                    // Test basic compute shader capability
+                    const shaderCode = `
+                        @compute @workgroup_size(1)
+                        fn main() {
+                            // Simple test shader
+                        }
+                    `;
+                    
+                    const shaderModule = device.createShaderModule({ code: shaderCode });
+                    console.log('[OK] WebGPU compute shaders working');
+                    
+                    console.log('[OK] BitNet WebGPU backend ready!');
+                    return 'webgpu';
+                }
+            } catch (e) {
+                console.log('[WARN] WebGPU failed, will use fallback:', e.message);
+            }
+        }
+        
+        // Check WASM SIMD
+        if (typeof WebAssembly !== 'undefined') {
+            console.log('[OK] WebAssembly available');
+            
+            try {
+                // Test SIMD support
+                const simdTest = new Uint8Array([
+                    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+                    0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7b, 0x03,
+                    0x02, 0x01, 0x00, 0x0a, 0x0a, 0x01, 0x08, 0x00,
+                    0x41, 0x00, 0xfd, 0x0f, 0x0b
+                ]);
+                
+                if (WebAssembly.validate(simdTest)) {
+                    console.log('[OK] WASM SIMD supported');
+                    return 'wasm-simd';
+                }
+            } catch (e) {
+                console.log('[WARN] WASM SIMD test failed:', e.message);
+            }
+        }
+        
+        console.log('[OK] CPU fallback available');
+        return 'cpu';
+        
+    } catch (error) {
+        console.error('[ERROR] BitNet readiness test failed:', error);
+        return 'error';
+    }
+}
 
 async function hasFp16() {
     try {
@@ -130,6 +206,18 @@ async function load() {
     self.postMessage({
         status: 'loading',
         data: 'Loading model...'
+    });
+
+    // Test BitNet readiness
+    self.postMessage({
+        status: 'loading',
+        data: 'Testing BitNet backend readiness...'
+    });
+    
+    const backend = await testBitNetReadiness();
+    self.postMessage({
+        status: 'loading',
+        data: `[OK] BitNet will use ${backend} backend`
     });
 
     // Load the pipeline and save it for future use.

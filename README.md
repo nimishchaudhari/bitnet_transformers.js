@@ -126,6 +126,32 @@ const pipe = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncase
 });
 ```
 
+### 🚀 BitNet (1.58-bit quantization)
+
+Transformers.js now supports **BitNet**, an extreme quantization technique that reduces model weights to just 1.58 bits per parameter (ternary values: -1, 0, +1). This provides **4x memory compression** while maintaining competitive performance.
+
+**Key Features:**
+- 🔥 **Extreme compression**: 4x smaller models compared to int8
+- ⚡ **GPU acceleration**: WebGPU compute shaders for high performance  
+- 🔄 **Multi-backend support**: Automatic fallback (WebGPU → WASM SIMD → CPU)
+- 🎯 **Microsoft BitNet support**: Compatible with `microsoft/bitnet-b1.58-2B-4T` models
+
+**Usage:**
+```javascript
+import { bitlinear } from '@huggingface/transformers';
+
+// BitLinear operation with ternary weights
+const output = await bitlinear(input, packedWeights, scales, outDim, inDim);
+```
+
+**Export BitNet models:**
+```python
+# Export Microsoft BitNet models to browser-compatible format
+python export_microsoft_bitnet_production.py
+```
+
+For more details, see the [BitNet implementation guide](scripts/bitnet_export.py) and [test examples](tests/bitnet/).
+
 
 ## Examples
 
