@@ -28,6 +28,11 @@ function App() {
   const [tps, setTps] = useState(null);
   const [numTokens, setNumTokens] = useState(null);
 
+  // BitNet WebGPU performance info
+  const [webgpuInfo, setWebgpuInfo] = useState(null);
+  const [bitnetBackend, setBitnetBackend] = useState(null);
+  const [performanceHints, setPerformanceHints] = useState([]);
+
   function onEnter(message) {
     setMessages(prev => [
       ...prev,
@@ -128,6 +133,13 @@ function App() {
           // Generation complete: re-enable the "Generate" button
           setIsRunning(false);
           break;
+
+        case 'webgpu-info':
+          // WebGPU performance information from BitNet backend
+          setWebgpuInfo(e.data.data.webgpuInfo);
+          setBitnetBackend(e.data.data.backend);
+          setPerformanceHints(e.data.data.performanceHints);
+          break;
       }
     };
 
@@ -170,19 +182,37 @@ function App() {
 
         {status === null && messages.length === 0 && (
           <div className="h-full overflow-auto scrollbar-thin flex justify-center items-center flex-col relative">
-            <div className="flex flex-col items-center mb-1 max-w-[250px] text-center">
+            <div className="flex flex-col items-center mb-1 max-w-[280px] text-center">
               <img src="logo.png" width="100%" height="auto" className="block"></img>
               <h1 className="text-4xl font-bold mb-1">Phi-3 WebGPU</h1>
-              <h2 className="font-semibold">A private and powerful AI chatbot that runs locally in your browser.</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h2 className="font-semibold">A private and powerful AI chatbot</h2>
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium">
+                  🚀 BitNet Ready
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Enhanced with BitNet quantization support for faster inference
+              </p>
             </div>
 
             <div className="flex flex-col items-center px-4">
               <p className="max-w-[514px] mb-4">
                 <br />
                 You are about to load <a href="https://huggingface.co/Xenova/Phi-3-mini-4k-instruct" target="_blank" rel="noreferrer" className="font-medium underline">Phi-3-mini-4k-instruct</a>,
-                a 3.82 billion parameter LLM that is optimized for inference on the web. Once downloaded, the model (2.3&nbsp;GB) will be cached and reused when you revisit the page.<br />
+                a 3.82 billion parameter LLM optimized for web inference. This demo includes <strong>BitNet quantization support</strong> for enhanced performance on compatible models.<br />
                 <br />
-                Everything runs directly in your browser using <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noreferrer" className="underline">🤗&nbsp;Transformers.js</a> and ONNX Runtime Web, meaning your conversations aren&#39;t sent to a server. You can even disconnect from the internet after the model has loaded!
+                Everything runs directly in your browser using <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noreferrer" className="underline">🤗&nbsp;Transformers.js</a> with WebGPU acceleration. Your conversations aren't sent to a server, and you can disconnect from the internet after loading!<br />
+                <br />
+                <div className="text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <strong className="text-blue-800 dark:text-blue-200">🚀 BitNet Features:</strong>
+                  <ul className="mt-1 text-blue-700 dark:text-blue-300 text-left">
+                    <li>• WebGPU performance optimization detection</li>
+                    <li>• Multi-backend fallback (WebGPU → WASM → CPU)</li>
+                    <li>• Real-time GPU adapter information</li>
+                    <li>• 4x memory compression for compatible models</li>
+                  </ul>
+                </div>
               </p>
 
               <button
@@ -193,7 +223,7 @@ function App() {
                 }}
                 disabled={status !== null}
               >
-                Load model
+                🚀 Load model with BitNet support
               </button>
             </div>
           </div>
@@ -204,6 +234,45 @@ function App() {
             {progressItems.map(({ file, progress, total }, i) => (
               <Progress key={i} text={file} percentage={progress} total={total} />
             ))}
+            
+            {/* BitNet WebGPU Performance Info */}
+            {webgpuInfo && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">
+                  🚀 BitNet WebGPU Backend ({bitnetBackend})
+                </h4>
+                <div className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                  <div><strong>GPU:</strong> {webgpuInfo.vendor} {webgpuInfo.device}</div>
+                  <div><strong>Architecture:</strong> {webgpuInfo.architecture}</div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {webgpuInfo.features['shader-f16'] && (
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded text-xs">
+                        ✓ shader-f16
+                      </span>
+                    )}
+                    {webgpuInfo.features['dp4a'] && (
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded text-xs">
+                        ✓ dp4a
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Performance Hints */}
+            {performanceHints.length > 0 && (
+              <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                  💡 Performance Tips
+                </h4>
+                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                  {performanceHints.map((hint, i) => (
+                    <li key={i}>• {hint}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </>)}
 
@@ -212,25 +281,37 @@ function App() {
           className="overflow-y-auto scrollbar-thin w-full flex flex-col items-center h-full"
         >
           <Chat messages={messages} />
-          <p className="text-center text-sm min-h-6 text-gray-500 dark:text-gray-300">
-            {tps && messages.length > 0 && (<>
-              {!isRunning &&
-                <span>Generated {numTokens} tokens in {(numTokens / tps).toFixed(2)} seconds&nbsp;&#40;</span>}
-              {<>
-                <span className="font-medium text-center mr-1 text-black dark:text-white">
-                  {tps.toFixed(2)}
+          <div className="text-center space-y-2">
+            <p className="text-sm min-h-6 text-gray-500 dark:text-gray-300">
+              {tps && messages.length > 0 && (<>
+                {!isRunning &&
+                  <span>Generated {numTokens} tokens in {(numTokens / tps).toFixed(2)} seconds&nbsp;&#40;</span>}
+                {<>
+                  <span className="font-medium text-center mr-1 text-black dark:text-white">
+                    {tps.toFixed(2)}
+                  </span>
+                  <span className="text-gray-500 dark:text-gray-300">tokens/second</span>
+                </>}
+                {!isRunning && <>
+                  <span className="mr-1">&#41;.</span>
+                  <span className="underline cursor-pointer" onClick={() => {
+                    worker.current.postMessage({ type: 'reset' });
+                    setMessages([]);
+                  }}>Reset</span>
+                </>}
+              </>)}
+            </p>
+            
+            {/* BitNet Backend Status */}
+            {bitnetBackend && (
+              <div className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                  🚀 BitNet: {bitnetBackend}
+                  {webgpuInfo && webgpuInfo.features['shader-f16'] && <span className="ml-1">+ f16</span>}
                 </span>
-                <span className="text-gray-500 dark:text-gray-300">tokens/second</span>
-              </>}
-              {!isRunning && <>
-                <span className="mr-1">&#41;.</span>
-                <span className="underline cursor-pointer" onClick={() => {
-                  worker.current.postMessage({ type: 'reset' });
-                  setMessages([]);
-                }}>Reset</span>
-              </>}
-            </>)}
-          </p>
+              </div>
+            )}
+          </div>
         </div>)}
 
         <div className="mt-2 border dark:bg-gray-700 rounded-lg w-[600px] max-w-[80%] max-h-[200px] mx-auto relative mb-3 flex">
