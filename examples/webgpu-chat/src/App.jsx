@@ -182,19 +182,37 @@ function App() {
 
         {status === null && messages.length === 0 && (
           <div className="h-full overflow-auto scrollbar-thin flex justify-center items-center flex-col relative">
-            <div className="flex flex-col items-center mb-1 max-w-[250px] text-center">
+            <div className="flex flex-col items-center mb-1 max-w-[280px] text-center">
               <img src="logo.png" width="100%" height="auto" className="block"></img>
               <h1 className="text-4xl font-bold mb-1">Phi-3 WebGPU</h1>
-              <h2 className="font-semibold">A private and powerful AI chatbot that runs locally in your browser.</h2>
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <h2 className="font-semibold">A private and powerful AI chatbot</h2>
+                <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium">
+                  🚀 BitNet Ready
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Enhanced with BitNet quantization support for faster inference
+              </p>
             </div>
 
             <div className="flex flex-col items-center px-4">
               <p className="max-w-[514px] mb-4">
                 <br />
                 You are about to load <a href="https://huggingface.co/Xenova/Phi-3-mini-4k-instruct" target="_blank" rel="noreferrer" className="font-medium underline">Phi-3-mini-4k-instruct</a>,
-                a 3.82 billion parameter LLM that is optimized for inference on the web. Once downloaded, the model (2.3&nbsp;GB) will be cached and reused when you revisit the page.<br />
+                a 3.82 billion parameter LLM optimized for web inference. This demo includes <strong>BitNet quantization support</strong> for enhanced performance on compatible models.<br />
                 <br />
-                Everything runs directly in your browser using <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noreferrer" className="underline">🤗&nbsp;Transformers.js</a> and ONNX Runtime Web, meaning your conversations aren&#39;t sent to a server. You can even disconnect from the internet after the model has loaded!
+                Everything runs directly in your browser using <a href="https://huggingface.co/docs/transformers.js" target="_blank" rel="noreferrer" className="underline">🤗&nbsp;Transformers.js</a> with WebGPU acceleration. Your conversations aren't sent to a server, and you can disconnect from the internet after loading!<br />
+                <br />
+                <div className="text-sm bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <strong className="text-blue-800 dark:text-blue-200">🚀 BitNet Features:</strong>
+                  <ul className="mt-1 text-blue-700 dark:text-blue-300 text-left">
+                    <li>• WebGPU performance optimization detection</li>
+                    <li>• Multi-backend fallback (WebGPU → WASM → CPU)</li>
+                    <li>• Real-time GPU adapter information</li>
+                    <li>• 4x memory compression for compatible models</li>
+                  </ul>
+                </div>
               </p>
 
               <button
@@ -205,7 +223,7 @@ function App() {
                 }}
                 disabled={status !== null}
               >
-                Load model
+                🚀 Load model with BitNet support
               </button>
             </div>
           </div>
